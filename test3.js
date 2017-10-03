@@ -34,7 +34,10 @@ class App {
         this.scene.add(light1);
         this.scene.add(new THREE.AmbientLight(WHITE,0.5))
 
-        this.cube_geom = new THREE.CubeGeometry(1, 1, 1);
+        // this.cube_geom = new THREE.CubeGeometry(1, 1, 1);
+        this.cube_geom = this.makeCubeGeometry();
+
+
         this.cubes = new THREE.Object3D();
         this.scene.add(this.cubes);
         this.scene.add(this.camera);
@@ -109,16 +112,21 @@ class App {
         animate();
     }
 
-
-    //make the central cube
-    makeRegularCube(pos) {
+    makeCube(pos) {
         let mat = new THREE.MeshLambertMaterial();
+        // let mat = new THREE.MeshPhongMaterial();
         let cube = new THREE.Mesh(this.cube_geom, mat);
         mat.color.set(YELLOW);
         cube.position.copy(pos);
         cube.phantom = false;
-        cube.adj = {};
         cube.joshid = nextID();
+        cube.adj = {};
+        return cube;
+    }
+
+    //make the central cube
+    makeRegularCube(pos) {
+        let cube = this.makeCube(pos);
         this.cubes.add(cube);
         this.makePhantoms(cube);
         return cube;
@@ -126,25 +134,21 @@ class App {
 
     //make a phantom cube
     makePhantomCube(pos) {
-        let mat = new THREE.MeshLambertMaterial();
-        mat.transparent = true;
-        mat.opacity = 0.0;
-        let cube = new THREE.Mesh(this.cube_geom, mat);
-        mat.color.set(GREEN);
-        cube.adj = {};
-        cube.joshid = nextID();
-        cube.position.copy(pos);
+        let cube = this.makeCube(pos);
+        cube.material.transparent = true;
+        cube.material.opacity = 0.0;
+        cube.material.color.set(GREEN);
         cube.phantom = true;
         cube.onMouseEnter = () => {
-            mat.opacity = 0.5;
+            cube.material.opacity = 0.5;
         };
         cube.onMouseExit = () => {
-            mat.opacity = 0.0;
+            cube.material.opacity = 0.0;
         };
         cube.onClick = () => {
             cube.phantom = false;
-            mat.color.set(YELLOW);
-            mat.transparent = false;
+            cube.material.color.set(YELLOW);
+            cube.material.transparent = false;
             this.makePhantoms(cube);
         };
         this.cubes.add(cube);
@@ -182,6 +186,25 @@ class App {
             cube.adj.back = this.makePhantomCube(pos2);
             cube.adj.back.adj.front = cube;
         }
+    }
+
+    makeCubeGeometry() {
+        let geom = new THREE.Geometry();
+        let box = new THREE.BoxGeometry(1,1,1);
+        geom.merge(box);
+        const rad = 0.20;
+        let cyl = new THREE.CylinderGeometry(rad, rad,0.5, 16);
+        cyl.translate(0,0.5,0);
+
+        cyl.translate(-0.25,0,-0.25);
+        geom.merge(cyl);
+        cyl.translate(+0.5,0,0);
+        geom.merge(cyl);
+        cyl.translate(0,0,+0.5);
+        geom.merge(cyl);
+        cyl.translate(-0.5,0,0);
+        geom.merge(cyl);
+        return geom;
     }
 }
 
