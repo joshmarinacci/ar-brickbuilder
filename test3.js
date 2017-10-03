@@ -32,7 +32,7 @@ class App {
         const light1 = new THREE.DirectionalLight();
         light1.position.set(0, 5, 10);
         this.scene.add(light1);
-        this.scene.add(new THREE.AmbientLight(WHITE,0.5))
+        this.scene.add(new THREE.AmbientLight(WHITE, 0.5))
 
         // this.cube_geom = new THREE.CubeGeometry(1, 1, 1);
         this.cube_geom = this.makeCubeGeometry();
@@ -52,26 +52,36 @@ class App {
         window.addEventListener('resize', (e) => this.onWindowResize(e), false);
 
         this.makeRegularCube(new THREE.Vector3(0, 0, 0));
+        this.hovered = null;
     }
+
 
     onMouseMove(e) {
         this.mouse.x = (e.clientX / this.renderer.domElement.clientWidth ) * 2 - 1;
         this.mouse.y = -(e.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
         this.raycaster.setFromCamera(this.mouse, this.camera);
         const new_intersections = this.raycaster.intersectObjects(this.cubes.children);
-        this.prev_intersections.forEach((prev) => {
-            let found = new_intersections.some((inter) => inter.object === prev.object);
-            if (!found) {
-                if (prev.object.onMouseExit) prev.object.onMouseExit();
+        //if the first object isn't currently the selection, then remove current selection and add the new one
+        if(new_intersections.length ===0) {
+            if(this.hovered) {
+                this.hovered.onMouseExit();
+                this.hovered = false;
             }
-        });
-        new_intersections.forEach((inter) => {
-            let found = this.prev_intersections.some((prev) => inter.object === prev.object);
-            if (!found) {
-                if (inter.object.onMouseEnter) inter.object.onMouseEnter();
-            }
-        });
-        this.prev_intersections = new_intersections.slice();
+            return;
+        }
+        const first = new_intersections[0].object;
+        if(!this.hovered) {
+            this.hovered = first;
+            this.hovered.onMouseEnter();
+            return;
+        }
+        if(this.hovered && first.uuid !== this.hovered.uuid) {
+            console.log("different");
+            this.hovered.onMouseExit();
+            this.hovered = first;
+            this.hovered.onMouseEnter();
+            return;
+        }
     }
 
     onMouseDown(e) {
