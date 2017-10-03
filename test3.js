@@ -7,6 +7,8 @@ function nextID() {
 }
 
 const WHITE = 0xffffff;
+const YELLOW = 0xffff00;
+const GREEN = 0x00ff00;
 
 function rand(min, max) {
     return Math.random() * (max - min) + min;
@@ -27,9 +29,10 @@ class App {
         this.camera.position.set(0, 0, 10);
         this.camera.lookAt(new THREE.Vector3(0, 0, 0));
 
-        const light1 = new THREE.PointLight(WHITE, 2, 50);
-        light1.position.set(0, 20, 10);
+        const light1 = new THREE.DirectionalLight();
+        light1.position.set(0, 5, 10);
         this.scene.add(light1);
+        this.scene.add(new THREE.AmbientLight(WHITE,0.5))
 
         this.cube_geom = new THREE.CubeGeometry(1, 1, 1);
         this.cubes = new THREE.Object3D();
@@ -111,7 +114,7 @@ class App {
     makeRegularCube(pos) {
         let mat = new THREE.MeshLambertMaterial();
         let cube = new THREE.Mesh(this.cube_geom, mat);
-        mat.color.setRGB(0.5, 0.5, 0.5);
+        mat.color.set(YELLOW);
         cube.position.copy(pos);
         cube.phantom = false;
         cube.adj = {};
@@ -127,7 +130,7 @@ class App {
         mat.transparent = true;
         mat.opacity = 0.0;
         let cube = new THREE.Mesh(this.cube_geom, mat);
-        mat.color.setRGB(0.5, 1.0, 0.5);
+        mat.color.set(GREEN);
         cube.adj = {};
         cube.joshid = nextID();
         cube.position.copy(pos);
@@ -140,7 +143,7 @@ class App {
         };
         cube.onClick = () => {
             cube.phantom = false;
-            mat.color.setRGB(0.5, 0.5, 0.5);
+            mat.color.set(YELLOW);
             mat.transparent = false;
             this.makePhantoms(cube);
         };
