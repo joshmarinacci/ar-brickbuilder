@@ -165,6 +165,7 @@ function makePhantoms(cube) {
 
 makeRegularCube(new THREE.Vector3(0,0,0));
 
+
 function animate() {
     requestAnimationFrame(animate);
     // cubes.rotation.y += 0.001;
