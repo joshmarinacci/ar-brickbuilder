@@ -1,0 +1,22 @@
+{
+  "name": "ar-brickbuilder",
+  "version": "1.0.0",
+  "description": "",
+  "main": "test1.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joshmarinacci/ar-brickbuilder.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/joshmarinacci/ar-brickbuilder/issues"
+  },
+  "homepage": "https://github.com/joshmarinacci/ar-brickbuilder#readme",
+  "dependencies": {
+    "three.js": "^0.77.1"
+  }
+}
