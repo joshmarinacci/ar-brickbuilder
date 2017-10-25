@@ -42,7 +42,6 @@ class BlockBuilderApp extends XRExampleBase {
         // window.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
         // window.addEventListener('resize', (e) => this.onWindowResize(e), false);
 
-        this.makeRegularCube(new THREE.Vector3(0, 0, -1));
         this.hovered = null;
 
         this.rf = true;
@@ -50,6 +49,9 @@ class BlockBuilderApp extends XRExampleBase {
     }
 
 
+    foundFloor() {
+        this.makeRegularCube(new THREE.Vector3(0, 0, -1));
+    }
     onMouseMove(e) {
         this.mouse.x = (e.clientX / this.renderer.domElement.clientWidth ) * 2 - 1;
         this.mouse.y = -(e.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
@@ -105,6 +107,7 @@ class BlockBuilderApp extends XRExampleBase {
             this.rf = true;
             frame.findFloorAnchor('first-floor-anchor').then((off) => {
                 $("#overlay").innerHTML = "<b>found</b>";
+                this.foundFloor();
             }).catch((e) => {
                 $("#overlay").innerHTML = "<b>error</b>";
             })
@@ -190,7 +193,7 @@ class BlockBuilderApp extends XRExampleBase {
         let geom = new THREE.Geometry();
         const size = 0.2; //size in meters
         const half = size/2;
-        let box = new THREE.BoxGeometry(size, size, size*0.7);
+        let box = new THREE.BoxGeometry(size, size*0.7, size);
         geom.merge(box);
         const rad = size*0.20;
         const qt = size/4;
