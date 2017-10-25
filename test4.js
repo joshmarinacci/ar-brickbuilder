@@ -1,6 +1,10 @@
 //make a renderer and add to page
 let __NEXT_ID = 0;
 
+function $(selector) {
+    return document.querySelector(selector);
+}
+
 function nextID() {
     __NEXT_ID += 1;
     return __NEXT_ID;
@@ -38,8 +42,11 @@ class BlockBuilderApp extends XRExampleBase {
         // window.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
         // window.addEventListener('resize', (e) => this.onWindowResize(e), false);
 
-        this.makeRegularCube(new THREE.Vector3(0, 1, -1));
+        this.makeRegularCube(new THREE.Vector3(0, 0, -1));
         this.hovered = null;
+
+        this.rf = true;
+        setTimeout(()=>this.rf = false,3000);
     }
 
 
@@ -92,15 +99,20 @@ class BlockBuilderApp extends XRExampleBase {
         this.camera.updateProjectionMatrix();
     }
 
-    updateScene() {
-        // this.cubes.rotation.y += 0.001;
-        // this.controls.update();
-        // this.renderer.render(this.scene, this.camera);
+    updateScene(frame) {
+        if(this.rf === false) {
+            $("#overlay").innerHTML = "<b>finding</b>";
+            this.rf = true;
+            frame.findFloorAnchor('first-floor-anchor').then((off) => {
+                $("#overlay").innerHTML = "<b>found</b>";
+            }).catch((e) => {
+                $("#overlay").innerHTML = "<b>error</b>";
+            })
+        }
     }
 
     makeCube(pos) {
         let mat = new THREE.MeshLambertMaterial();
-        // let mat = new THREE.MeshPhongMaterial();
         let cube = new THREE.Mesh(this.cube_geom, mat);
         mat.color.set(GREEN);
         cube.position.copy(pos);
