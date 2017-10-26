@@ -22,10 +22,10 @@ function rand(min, max) {
 class BlockBuilderApp extends XRExampleBase {
     constructor(elem) {
         super(elem, false);
-        console.log("el = ",elem,this.el);
-        //elem. touchstart doesn't work for some reason
+        //TODO: elem.touchstart doesn't work for some reason
         //elem.addEventListener('touchstart', (e) => console.log("got a touch"), false);
         document.addEventListener('touchstart',(e)=>this.onTouchStart(e),false);
+        this.selected = null;
     }
     initializeScene() {
         const light1 = new THREE.DirectionalLight();
@@ -88,12 +88,18 @@ class BlockBuilderApp extends XRExampleBase {
     checkIntersection() {
         this.raycaster.setFromCamera(this.mouse, this.camera);
         const intersects = this.raycaster.intersectObjects(this.cubes.children);
-        //only click on the thing closest to the viewer
-        if (intersects.length > 0) {
-            const intersection = intersects[0];
-            const obj = intersection.object;
-            if (obj.onClick) obj.onClick();
-        }
+        //only click on the thing closest to the viewer that's visible
+        if(intersects.length === 0) return this.setSelected(null);
+
+        const cube = intersects[0].object;
+        if(cube.phantom) cube.makeReal();
+        this.setSelected(cube);
+    }
+
+    setSelected(obj) {
+        if(this.selected) this.selected.unselect();
+        this.selected = obj;
+        if(this.selected) this.selected.select();
     }
 
     onMouseDown(e) {
@@ -141,6 +147,28 @@ class BlockBuilderApp extends XRExampleBase {
         cube.phantom = false;
         cube.joshid = nextID();
         cube.adj = {};
+
+        cube.select = function() {
+            Object.keys(this.adj).forEach((key)=>{
+                let side = this.adj[key];
+                if(side.phantom) side.visible = true;
+            });
+        };
+        cube.unselect = function() {
+            Object.keys(this.adj).forEach((key)=>{
+                let side = this.adj[key];
+                if(side.phantom) side.visible = false;
+            });
+        };
+        const owner = this;
+        cube.makeReal = function() {
+            this.phantom = false;
+            this.visible = true;
+            this.material.color.set(YELLOW);
+            this.material.transparent = false;
+            this.material.opacity = 1.0;
+            owner.makePhantoms(cube);
+        };
         return cube;
     }
 
@@ -157,14 +185,9 @@ class BlockBuilderApp extends XRExampleBase {
         let cube = this.makeCube(pos);
         cube.material.transparent = true;
         cube.material.opacity = 0.2;
+        cube.visible = false;
         cube.material.color.set(GREEN);
         cube.phantom = true;
-        cube.onMouseEnter = () => {
-            cube.material.opacity = 0.5;
-        };
-        cube.onMouseExit = () => {
-            cube.material.opacity = 0.0;
-        };
         cube.onClick = () => {
             cube.phantom = false;
             cube.material.color.set(YELLOW);
