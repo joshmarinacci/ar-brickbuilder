@@ -22,6 +22,10 @@ function rand(min, max) {
 class BlockBuilderApp extends XRExampleBase {
     constructor(elem) {
         super(elem, false);
+        console.log("el = ",elem,this.el);
+        //elem. touchstart doesn't work for some reason
+        //elem.addEventListener('touchstart', (e) => console.log("got a touch"), false);
+        document.addEventListener('touchstart',(e)=>this.onTouchStart(e),false);
     }
     initializeScene() {
         const light1 = new THREE.DirectionalLight();
@@ -39,10 +43,11 @@ class BlockBuilderApp extends XRExampleBase {
         this.prev_intersections = [];
 
         // window.addEventListener('mousemove', (e) => this.onMouseMove(e), false);
-        // window.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
+        window.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
         // window.addEventListener('resize', (e) => this.onWindowResize(e), false);
 
         this.hovered = null;
+        this.touched = false;
 
         this.rf = true;
         setTimeout(()=>this.rf = false,3000);
@@ -50,7 +55,7 @@ class BlockBuilderApp extends XRExampleBase {
 
 
     foundFloor() {
-        this.makeRegularCube(new THREE.Vector3(0, 0, -1));
+        this.makeRegularCube(new THREE.Vector3(0, 1, -1));
     }
     onMouseMove(e) {
         this.mouse.x = (e.clientX / this.renderer.domElement.clientWidth ) * 2 - 1;
@@ -80,9 +85,7 @@ class BlockBuilderApp extends XRExampleBase {
         }
     }
 
-    onMouseDown(e) {
-        this.mouse.x = (e.clientX / this.renderer.domElement.clientWidth ) * 2 - 1;
-        this.mouse.y = -(e.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+    checkIntersection() {
         this.raycaster.setFromCamera(this.mouse, this.camera);
         const intersects = this.raycaster.intersectObjects(this.cubes.children);
         //only click on the thing closest to the viewer
@@ -91,6 +94,21 @@ class BlockBuilderApp extends XRExampleBase {
             const obj = intersection.object;
             if (obj.onClick) obj.onClick();
         }
+    }
+
+    onMouseDown(e) {
+        this.mouse.x = (e.clientX / this.renderer.domElement.clientWidth ) * 2 - 1;
+        this.mouse.y = -(e.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+        this.checkIntersection();
+    }
+
+    onTouchStart(e) {
+        if(!e.touches) return;
+        if(e.touches.length <= 0) return;
+        this.touched = true;
+        this.mouse.x = (e.touches[0].clientX / this.renderer.domElement.clientWidth ) * 2 - 1;
+        this.mouse.y = -(e.touches[0].clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+        this.checkIntersection();
     }
 
     onWindowResize(e) {
@@ -102,11 +120,12 @@ class BlockBuilderApp extends XRExampleBase {
     }
 
     updateScene(frame) {
+        $("#overlay").innerHTML = `<i>touched = ${this.touched} </i>`;
         if(this.rf === false) {
-            $("#overlay").innerHTML = "<b>finding</b>";
+            // $("#overlay").innerHTML = "<b>finding</b>";
             this.rf = true;
             frame.findFloorAnchor('first-floor-anchor').then((off) => {
-                $("#overlay").innerHTML = "<b>found</b>";
+                // $("#overlay").innerHTML = "<b>found</b>";
                 this.foundFloor();
             }).catch((e) => {
                 $("#overlay").innerHTML = "<b>error</b>";
@@ -117,7 +136,7 @@ class BlockBuilderApp extends XRExampleBase {
     makeCube(pos) {
         let mat = new THREE.MeshLambertMaterial();
         let cube = new THREE.Mesh(this.cube_geom, mat);
-        mat.color.set(GREEN);
+        mat.color.set(YELLOW);
         cube.position.copy(pos);
         cube.phantom = false;
         cube.joshid = nextID();
@@ -137,7 +156,7 @@ class BlockBuilderApp extends XRExampleBase {
     makePhantomCube(pos) {
         let cube = this.makeCube(pos);
         cube.material.transparent = true;
-        cube.material.opacity = 0.0;
+        cube.material.opacity = 0.2;
         cube.material.color.set(GREEN);
         cube.phantom = true;
         cube.onMouseEnter = () => {
@@ -157,33 +176,34 @@ class BlockBuilderApp extends XRExampleBase {
     }
 
     makePhantoms(cube) {
+        const size = 0.2; //size in meters
         if (!cube.adj.left) {
-            let pos2 = cube.position.clone().add(new THREE.Vector3(-1, 0, 0));
+            let pos2 = cube.position.clone().add(new THREE.Vector3(-size, 0, 0));
             cube.adj.left = this.makePhantomCube(pos2);
             cube.adj.left.adj.right = cube;
         }
         if (!cube.adj.right) {
-            let pos2 = cube.position.clone().add(new THREE.Vector3(+1, 0, 0));
+            let pos2 = cube.position.clone().add(new THREE.Vector3(+size, 0, 0));
             cube.adj.right = this.makePhantomCube(pos2);
             cube.adj.right.adj.left = cube;
         }
         if (!cube.adj.top) {
-            let pos2 = cube.position.clone().add(new THREE.Vector3(0, +1, 0));
+            let pos2 = cube.position.clone().add(new THREE.Vector3(0, +size*0.7, 0));
             cube.adj.top = this.makePhantomCube(pos2);
             cube.adj.top.adj.bottom = cube;
         }
         if (!cube.adj.bottom) {
-            let pos2 = cube.position.clone().add(new THREE.Vector3(0, -1, 0));
+            let pos2 = cube.position.clone().add(new THREE.Vector3(0, -size*0.7, 0));
             cube.adj.bottom = this.makePhantomCube(pos2);
             cube.adj.bottom.adj.top = cube;
         }
         if (!cube.adj.front) {
-            let pos2 = cube.position.clone().add(new THREE.Vector3(0, 0, +1));
+            let pos2 = cube.position.clone().add(new THREE.Vector3(0, 0, +size));
             cube.adj.front = this.makePhantomCube(pos2);
             cube.adj.front.adj.back = cube;
         }
         if (!cube.adj.back) {
-            let pos2 = cube.position.clone().add(new THREE.Vector3(0, 0, -1));
+            let pos2 = cube.position.clone().add(new THREE.Vector3(0, 0, -size));
             cube.adj.back = this.makePhantomCube(pos2);
             cube.adj.back.adj.front = cube;
         }
@@ -198,7 +218,7 @@ class BlockBuilderApp extends XRExampleBase {
         const rad = size*0.20;
         const qt = size/4;
         let cyl = new THREE.CylinderGeometry(rad, rad, rad, 16);
-        cyl.translate(0,size*0.7-rad/2,0);
+        cyl.translate(0,size*0.7*0.5,0);
 
         cyl.translate(-qt,0,-qt);
         geom.merge(cyl);

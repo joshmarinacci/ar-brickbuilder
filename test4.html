@@ -31,7 +31,7 @@
     window.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             try {
-                window.pageApp = new BlockBuilderApp(document.getElementById('stage'));
+                window.pageApp = new BlockBuilderApp(document.getElementById('container'));
             } catch(e) {
                 console.error('page error', e)
             }
