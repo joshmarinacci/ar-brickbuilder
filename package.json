@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/joshmarinacci/ar-brickbuilder#readme",
   "dependencies": {
+    "cannon": "^0.6.2",
     "three.js": "^0.77.1"
   }
 }
