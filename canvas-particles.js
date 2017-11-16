@@ -4,12 +4,20 @@ function pd(rad) {
 const MODES = {
     MOVE:'MOVE',
     STAY:'STAY'
+};
+const PI = Math.PI;
+
+function wrapPiRange(v) {
+    if(v < -PI) return v + PI*2;
+    if(v > PI) return v - PI*2;
+    return v
 }
+
 class Particle {
     constructor() {
         this.v = 1;
-        this.a = Math.PI/2;//0;//Math.random()*Math.PI*2;
-        this.ang = 0;
+        this.bearing = Math.random()*PI*2;
+        this.angle = 0;
         this.x = 0;
         this.y = 0;
         this.tx = 100;
@@ -18,34 +26,34 @@ class Particle {
     }
     update() {
         if(this.mode === MODES.MOVE) {
-            if(this.a < -Math.PI) {
-                this.a += Math.PI*2
-            }
-            if(this.a > Math.PI) {
-                this.a -= Math.PI*2;
-            }
-            this.ang = Math.atan2(this.y-this.ty, this.x-this.tx);
-
-            if(this.a > 0) {
-                // const d1 = this.a-this.ang;
-                // const d2 = this.ang - this.a;
-            }
-            // this.ang += Math.PI*2;
-            if(this.a > this.ang) {
-                this.a -= 0.02;
+            this.angle = Math.atan2(this.y-this.ty, this.x-this.tx);
+            this.bearing = wrapPiRange(this.bearing);
+            this.angle = wrapPiRange(this.angle);
+            let dir = 0;
+            if(this.angle < this.bearing) {
+                // console.log("go clockwise")
+                dir = 1;
             } else {
-                this.a += 0.02;
+                // console.log("go counter clockwise")
+                dir = -1;
             }
+            const d = this.bearing-this.angle;
+            if(d > PI)  dir *= -1;
+            if(d < -PI) dir *= -1;
+
+
+            // console.log(`bearing ${this.bearing} angle ${this.angle} diff ${d} dir ${dir}`);
+            this.bearing += dir * 0.02;
         }
 
-        this.x -= Math.cos(this.a)*this.v;
-        this.y -= Math.sin(this.a)*this.v;
+        this.x += Math.cos(this.bearing)*this.v;
+        this.y += Math.sin(this.bearing)*this.v;
     }
     draw(c) {
         c.fillStyle = 'yellow';
         c.save();
         c.translate(this.x,this.y)
-        c.rotate(this.a);
+        c.rotate(this.bearing);
         c.fillRect(0,-2.5,20,5);
         c.restore();
 
@@ -59,7 +67,7 @@ class Particle {
         function pa(ang) {
             return Math.floor(ang/Math.PI*180);
         }
-        c.fillText(`dir ${pa(this.a)} ${pa(this.ang)}`,0,0)
+        c.fillText(`dir ${pa(this.bearing)} ${pa(this.angle)}`,0,0)
         c.fillText(`xy ${Math.floor(this.x)},${Math.floor(this.y)}`, 0, 20)
         c.fillText(`txy ${Math.floor(this.tx)},${Math.floor(this.ty)}`, 0, 40)
         c.fillText(`mode = ${this.mode}`, 0, 60);
@@ -73,26 +81,7 @@ class Particle {
     pointTo(x,y) {
         this.tx = x;
         this.ty = y;
-
-        const a1 = this.a;
-        const a2 = Math.atan2(this.y-this.ty, this.x-this.tx);
-        console.log("a1 = ", a1);
-        console.log('a2 = ', a2);
-        if(a1 < a2) {
-            // console.log("clockwise")
-        } else {
-            // console.log("countercw")
-        }
-        const PI2 = Math.PI*2;
-        const c1 = Math.abs(a1-a2);
-        const c2 = Math.abs(a1+PI2-a2);
-        console.log(c1.toFixed(2),c2.toFixed(2));
-        if(c1<c2) {
-            console.log("cw")
-        } else {
-            console.log("ccw")
-        }
-
+        this.mode = MODES.MOVE
     }
 }
 
@@ -108,11 +97,11 @@ function setup() {
     const h = 400;
     const parts = [];
     parts.push(new Particle());
-    // parts.push(new Particle());
-    // parts.push(new Particle());
-    // parts.push(new Particle());
+    parts.push(new Particle());
+    parts.push(new Particle());
+    parts.push(new Particle());
     function redraw() {
-        // requestAnimationFrame(redraw)
+        requestAnimationFrame(redraw)
         // setTimeout(redraw,100)
         ctx.fillStyle = 'green';
         ctx.fillRect(0,0,w,h);
@@ -148,7 +137,7 @@ function setup() {
         parts.forEach((part)=>{
             part.pointTo(e.clientX-w/2,e.clientY-h/2);
         })
-        redraw()
+        // redraw()
     })
 }
 
@@ -177,6 +166,29 @@ update on every frame
 add buttons to set the mode of all particles and see them move
 
 raf to animate
+
+
+
+
+
+
+angle b is the bearing
+angle a is the angle from the current position to the target
+
+a is in the range of -pi to pi
+convert b to the range of -pi to pi
+
+if(a < b) then turn clockwise (right)
+if(a > b) then turn counter clockwise
+d is the difference between b and a (b-a => d)
+
+if d is more than pi (180) then flip the direction.
+
+
+
+
+
+
 
 
 
