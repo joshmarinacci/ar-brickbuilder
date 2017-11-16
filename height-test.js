@@ -232,7 +232,8 @@ class BasicExample {
     }
 
     start() {
-        var self = this;
+        const self = this
+
         function draw(time) {
             requestAnimationFrame(draw)
             self.update(time);
@@ -242,12 +243,6 @@ class BasicExample {
     }
 }
 
-var ex = new BasicExample('#container');
+const ex = new BasicExample('#container')
 ex.setup();
 ex.start();
-//create a plane
-//randomly change the y value of the vertexes
-// apply a scaling factor
-//randomly change the color of the vertexes using a very simple interpolation between two colors
-//perturb the lines non-randomly using a function
-//set the colors using a multi-stop gradient
