@@ -5,14 +5,21 @@ function $(selector) {
     return document.querySelector(selector);
 }
 
+function on(elem, type, list) {
+	elem.addEventListener(type, list);
+}
+
 function nextID() {
     __NEXT_ID += 1;
     return __NEXT_ID;
 }
 
-const WHITE = 0xffffff;
-const YELLOW = 0xffff00;
-const GREEN = 0x00ff00;
+const RED     = 0xff0000;
+const GREEN   = 0x00ff00;
+const BLUE    = 0x0000ff;
+const YELLOW  = 0xffff00;
+const WHITE   = 0xffffff;
+const BLACK   = 0x000000;
 
 function rand(min, max) {
     return Math.random() * (max - min) + min;
@@ -22,10 +29,26 @@ function rand(min, max) {
 class BlockBuilderApp extends XRExampleBase {
     constructor(elem) {
         super(elem, false);
+        this.hasTouch = ('ontouchstart' in document.documentElement);
         //TODO: elem.touchstart doesn't work for some reason
         //elem.addEventListener('touchstart', (e) => console.log("got a touch"), false);
-        document.addEventListener('touchstart',(e)=>this.onTouchStart(e),false);
         this.selected = null;
+        
+        this.selectedColor = YELLOW;
+        
+        
+        on($('#red'),'click',(e)=> this.setSelectedColor(RED,e));
+        on($('#green'),'click',(e)=> this.setSelectedColor(GREEN,e));
+        on($('#blue'),'click',(e)=> this.setSelectedColor(BLUE,e));
+        on($('#yellow'),'click',(e)=> this.setSelectedColor(YELLOW,e));
+        on($('#white'),'click',(e)=> this.setSelectedColor(WHITE,e));
+        on($('#black'),'click',(e)=> this.setSelectedColor(BLACK,e));
+        
+        console.log("setting up");
+        on($('#fire'),'click',(e)=>{
+	        console.log("shooting a sphere");
+	        this.makeFireball();
+        });
     }
     initializeScene() {
         const light1 = new THREE.DirectionalLight();
@@ -43,7 +66,11 @@ class BlockBuilderApp extends XRExampleBase {
         this.prev_intersections = [];
 
         // window.addEventListener('mousemove', (e) => this.onMouseMove(e), false);
-        window.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
+		if(this.hasTouch) {
+	        this.glCanvas.addEventListener('touchstart',(e)=>this.onTouchStart(e),false);
+        } else {
+            this.glCanvas.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
+        }
         // window.addEventListener('resize', (e) => this.onWindowResize(e), false);
 
         this.hovered = null;
@@ -77,7 +104,6 @@ class BlockBuilderApp extends XRExampleBase {
             return;
         }
         if(this.hovered && first.uuid !== this.hovered.uuid) {
-            console.log("different");
             this.hovered.onMouseExit();
             this.hovered = first;
             this.hovered.onMouseEnter();
@@ -139,10 +165,26 @@ class BlockBuilderApp extends XRExampleBase {
         }
     }
 
+	setSelectedColor(color,e) {
+		this.selectedColor = color;
+		if(this.selected) {
+			this.selected.material.color.set(this.selectedColor)
+			for(let adj in this.selected.adj) {
+				let cube = this.selected.adj[adj]
+				if(cube && cube.phantom === true) {
+					cube.material.color.set(this.selectedColor)
+				}
+			}
+		}
+		if(e) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
+	}
     makeCube(pos) {
         let mat = new THREE.MeshLambertMaterial();
         let cube = new THREE.Mesh(this.cube_geom, mat);
-        mat.color.set(YELLOW);
+        mat.color.set(this.selectedColor);
         cube.position.copy(pos);
         cube.phantom = false;
         cube.joshid = nextID();
@@ -164,7 +206,7 @@ class BlockBuilderApp extends XRExampleBase {
         cube.makeReal = function() {
             this.phantom = false;
             this.visible = true;
-            this.material.color.set(YELLOW);
+            this.material.color.set(this.selectedColor);
             this.material.transparent = false;
             this.material.opacity = 1.0;
             owner.makePhantoms(cube);
@@ -186,11 +228,11 @@ class BlockBuilderApp extends XRExampleBase {
         cube.material.transparent = true;
         cube.material.opacity = 0.2;
         cube.visible = false;
-        cube.material.color.set(GREEN);
+        cube.material.color.set(this.selectedColor);
         cube.phantom = true;
         cube.onClick = () => {
             cube.phantom = false;
-            cube.material.color.set(YELLOW);
+            cube.material.color.set(this.selectedColor);
             cube.material.transparent = false;
             this.makePhantoms(cube);
         };
@@ -253,6 +295,14 @@ class BlockBuilderApp extends XRExampleBase {
         geom.merge(cyl);
         return geom;
     }
+	
+	makeFireball() {
+		let geo = new THREE.SphereGeometry(1);
+		let mat = new THREE.MeshLambertMaterial();
+		let ball = new THREE.Mesh(geo,mat);
+		ball.position.z = -4;
+		this.scene.add(ball);
+	}
 }
 
 

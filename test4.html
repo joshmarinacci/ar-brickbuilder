@@ -23,6 +23,16 @@
             background-color: rgba(255,255,255,0.7);
             padding: 1em;
         }
+        #controls button {
+	        font-size: 200%;
+        }
+        .hbox {
+	        display: flex;
+	        flex-direction: row;
+        }
+        .spacer {
+	        flex:1;
+        }
     </style>
 </head>
 <body>
@@ -31,12 +41,15 @@
 
 <div id="overlay"><h3>Look at the floor and move around until detected</h3></div>
 
-<div id="controls">
-    <button>red</button>
-    <button>green</button>
-    <button>yellow</button>
-    <button>blue</button>
-    <button>fire</button>
+<div id="controls" class='hbox'>
+    <button id='red'>red</button>
+    <button id='green'>green</button>
+    <button id='blue'>blue</button>
+    <button id='yellow'>yellow</button>
+    <button id='black'>black</button>
+    <button id='white'>white</button>
+    <span class='spacer'></span>
+    <button id='fire'>fire</button>
 </div>
 
 <script src="./node_modules/three/three.js"></script>
