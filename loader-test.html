@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>loader test</title>
+    <style type="text/css">
+        #container {
+            position: absolute;
+            padding:0;
+            margin:0;
+            top:0;
+            bottom:0px;
+            right:0px;
+            left:0;
+            overflow: hidden;
+        }
+        html, body, #container { padding:0; margin:0; border-width: 0}
+    </style>
+</head>
+<body>
+
+<div id="container"></div>
+<script src="node_modules/three/build/three.js"></script>
+<script src="node_modules/three/examples/js/controls/OrbitControls.js"></script>
+<script src="node_modules/three/examples/js/loaders/GLTFLoader.js"></script>
+<script src="./loader-test.js"></script>
+</body>
+</html>
