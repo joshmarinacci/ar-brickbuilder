@@ -26,6 +26,7 @@
     <button id='white'>white</button>
     <span class='spacer'></span>
     <button id='fire'>fire</button>
+    <button id="reset">reset</button>
 </div>
 
 
@@ -172,9 +173,8 @@
             on($('#white'),'click',(e)=> this.setSelectedColor(WHITE,e));
             on($('#black'),'click',(e)=> this.setSelectedColor(BLACK,e));
 
-            on($('#fire'),'click',(e)=>{
-                this.makeFireball();
-            });
+            on($('#fire'),'click',(e)=>{  this.makeFireball(); });
+            on($('#reset'),'click',(e)=> this.resetPositions());
         }
         initializeScene() {
             console.log("making the block builder scene")
@@ -273,7 +273,7 @@
 
         updatePhysics() {
             const timeStep = 1.0 / 60.0;
-            this.world.step(timeStep/5)
+            this.world.step(timeStep)
             this.cubes.children.forEach((cube)=>{
                 if(!cube.phantom) {
                     cube.position.copy(cube.body.position);
@@ -391,6 +391,8 @@
             let cube = new THREE.Mesh(this.cube_geom, mat);
             mat.color.set(this.selectedColor);
             cube.position.copy(pos);
+            cube.originalPosition = pos.clone();
+            cube.originalQuaternion = cube.quaternion.clone()
             cube.phantom = false;
             cube.castShadow = true;
             cube.joshid = nextID();
@@ -498,22 +500,22 @@
         makeCubeGeometry() {
             let geom = new THREE.Geometry();
             const size = 0.2; //size in meters
-//            const half = size/2;
+            const half = size/2;
             let box = new THREE.BoxGeometry(size, size*0.7, size);
             geom.merge(box);
-//            const rad = size*0.20;
-//            const qt = size/4;
-//            let cyl = new THREE.CylinderGeometry(rad, rad, rad, 16);
-//            cyl.translate(0,size*0.7*0.5,0);
+            const rad = size*0.20;
+            const qt = size/4;
+            let cyl = new THREE.CylinderGeometry(rad, rad, rad, 16);
+            cyl.translate(0,size*0.7*0.5,0);
 
-//            cyl.translate(-qt,0,-qt);
-//            geom.merge(cyl);
-//            cyl.translate(+half,0,0);
-//            geom.merge(cyl);
-//            cyl.translate(0,0,+half);
-//            geom.merge(cyl);
-//            cyl.translate(-half,0,0);
-//            geom.merge(cyl);
+            cyl.translate(-qt,0,-qt);
+            geom.merge(cyl);
+            cyl.translate(+half,0,0);
+            geom.merge(cyl);
+            cyl.translate(0,0,+half);
+            geom.merge(cyl);
+            cyl.translate(-half,0,0);
+            geom.merge(cyl);
             return geom;
         }
 
@@ -524,6 +526,18 @@
 //            let ball = new THREE.Mesh(geo,mat);
 //            ball.position.z = -4;
 //            this.scene.add(ball);
+        }
+
+        resetPositions() {
+            this.physicsEnabled = false;
+            this.cubes.children.forEach((cube) => {
+                if(!cube.phantom) {
+                    cube.position.copy(cube.originalPosition)
+                    cube.quaternion.copy(cube.originalQuaternion);
+                    cube.body.position.copy(cube.originalPosition)
+                    cube.body.quaternion.copy(cube.originalQuaternion)
+                }
+            })
         }
     }
 
