@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style type="text/css">
+        #controls {
+            display: none;
+        }
+        body, html, #container {
+            padding:0;
+            margin:0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="container"></div>
+
+<div id="controls" class='hbox'>
+    <button id='red'>red</button>
+    <button id='green'>green</button>
+    <button id='blue'>blue</button>
+    <button id='yellow'>yellow</button>
+    <button id='black'>black</button>
+    <button id='white'>white</button>
+    <span class='spacer'></span>
+    <button id='fire'>fire</button>
+</div>
+
+
+
+<script src="node_modules/three/build/three.js"></script>
+<script src="node_modules/three/examples/js/controls/OrbitControls.js"></script>
+<script src="node_modules/three/examples/js/loaders/OBJLoader.js"></script>
+<script src="node_modules/three/examples/js/vr/ViveController.js"></script>
+<script src="node_modules/three/examples/js/vr/WebVR.js"></script>
+<script>
+    //make a renderer and add to page
+    let __NEXT_ID = 0;
+
+    function $(selector) {
+        return document.querySelector(selector);
+    }
+
+    function on(elem, type, list) {
+        elem.addEventListener(type, list);
+    }
+
+    function nextID() {
+        __NEXT_ID += 1;
+        return __NEXT_ID;
+    }
+
+    const RED     = 0xff0000;
+    const GREEN   = 0x00ff00;
+    const BLUE    = 0x0000ff;
+    const YELLOW  = 0xffff00;
+    const WHITE   = 0xffffff;
+    const BLACK   = 0x000000;
+
+    function rand(min, max) {
+        return Math.random() * (max - min) + min;
+    }
+
+    class JoshBase {
+        constructor(elem) {
+            console.log("making a Josh Base");
+            setTimeout(()=>{this.start()},1000)
+        }
+
+        start() {
+            console.log("really starting")
+            this.el = document.createElement('div');
+            this.glCanvas = this.el;
+            document.body.appendChild(this.el);
+
+            this.scene = new THREE.Scene();
+            this.scene.background = new THREE.Color(0x505050);
+
+            var user = new THREE.Group();
+            user.position.set(0,1.6,0);
+            this.scene.add(user);
+
+
+            this.camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 0.1, 10 );
+            user.add( this.camera );
+
+            this.scene.add( new THREE.HemisphereLight( 0x606060, 0x404040 ) );
+
+            this.isVr = true;
+            this.isXr = false;
+
+
+            this.floorGroup = new THREE.Group();
+            this.floorGroup.position.y = 0
+            this.floorGroup.position.x = 0;
+            this.floorGroup.position.z = -1
+            this.scene.add(this.floorGroup)
+
+
+            this.renderer = new THREE.WebGLRenderer( { antialias: true } );
+            this.renderer.setPixelRatio( window.devicePixelRatio );
+            this.renderer.setSize( window.innerWidth, window.innerHeight );
+            this.renderer.vr.enabled = true;
+            this.el.appendChild( this.renderer.domElement );
+            document.body.appendChild( WEBVR.createButton( this.renderer ) );
+
+            this.controller1 = new THREE.ViveController(0);
+            user.add(this.controller1)
+
+            var loader = new THREE.OBJLoader();
+            loader.setPath( 'vive-controller/' );
+            loader.load( 'vr_controller_vive_1_5.obj', ( object ) =>{
+                const loader = new THREE.TextureLoader();
+                loader.setPath( 'vive-controller/' );
+                const controller = object.children[0];
+                controller.material.map = loader.load( 'onepointfive_texture.png' );
+                controller.material.specularMap = loader.load( 'onepointfive_spec.png' );
+                this.controller1.add( object.clone() );
+//                controller2.add( object.clone() );
+            } );
+
+            var geometry = new THREE.Geometry();
+            geometry.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
+            geometry.vertices.push( new THREE.Vector3( 0, 0, - 1 ) );
+            var line = new THREE.Line( geometry );
+            line.name = 'line';
+            line.scale.z = 5;
+            this.controller1.add( line.clone() );
+
+            this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+            this.initializeScene();
+
+            this.onWindowResize = () => {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize( window.innerWidth, window.innerHeight );
+            }
+            window.addEventListener( 'resize', this.onWindowResize, false );
+
+            this.render = () => {
+                this.controls.update();
+                this.controller1.update();
+                this.renderer.render( this.scene, this.camera );
+            }
+            this.renderer.animate( this.render );
+
+
+        }
+    }
+
+    class BlockBuilderApp extends JoshBase {
+        constructor(elem) {
+            super(elem, false);
+            console.log("making a Block Builder App");
+            this.hasTouch = ('ontouchstart' in document.documentElement);
+            //TODO: elem.touchstart doesn't work for some reason
+            //elem.addEventListener('touchstart', (e) => console.log("got a touch"), false);
+            this.selected = null;
+
+            this.selectedColor = YELLOW;
+
+
+            on($('#red'),'click',(e)=> this.setSelectedColor(RED,e));
+            on($('#green'),'click',(e)=> this.setSelectedColor(GREEN,e));
+            on($('#blue'),'click',(e)=> this.setSelectedColor(BLUE,e));
+            on($('#yellow'),'click',(e)=> this.setSelectedColor(YELLOW,e));
+            on($('#white'),'click',(e)=> this.setSelectedColor(WHITE,e));
+            on($('#black'),'click',(e)=> this.setSelectedColor(BLACK,e));
+
+            on($('#fire'),'click',(e)=>{
+                this.makeFireball();
+            });
+        }
+        initializeScene() {
+            console.log("making the block builder scene")
+            const light1 = new THREE.DirectionalLight();
+            light1.position.set(0, 5, 10);
+            this.scene.add(light1);
+            this.scene.add(new THREE.AmbientLight(WHITE, 0.5));
+
+            this.cube_geom = this.makeCubeGeometry();
+            this.cubes = new THREE.Object3D();
+            this.floorGroup.add(this.cubes);
+
+            this.raycaster = new THREE.Raycaster();
+            this.mouse = new THREE.Vector2();
+            this.prev_intersections = [];
+
+            // window.addEventListener('mousemove', (e) => this.onMouseMove(e), false);
+            if(this.hasTouch) {
+                this.glCanvas.addEventListener('touchstart',(e)=>this.onTouchStart(e),false);
+            } else {
+                this.glCanvas.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
+            }
+            // window.addEventListener('resize', (e) => this.onWindowResize(e), false);
+
+            this.hovered = null;
+            this.touched = false;
+
+            if(this.isVr) {
+                var room = new THREE.Mesh(
+                    new THREE.BoxGeometry( 6, 6, 6, 8, 8, 8 ),
+                    new THREE.MeshBasicMaterial( { color: 0x404040, wireframe: true } )
+                );
+                room.position.y = 3;
+                this.scene.add( room );
+
+
+                this.onTriggerDown = (e)=>{
+                    console.log("pressed trigger");
+                    var tempMatrix = new THREE.Matrix4();
+                    var con = e.target;
+                    tempMatrix.identity().extractRotation(con.matrixWorld)
+                    this.raycaster.ray.origin.setFromMatrixPosition(con.matrixWorld)
+                    this.raycaster.ray.direction.set(0,0,-1).applyMatrix4(tempMatrix)
+//                    const intersects = this.raycaster.intersectObjects(this.cubes.children);
+//                    console.log("got intersections",intersects.length)
+                    this.checkIntersection();
+
+                }
+                this.onTriggerUp =(e) => {
+                    console.log("released trigger");
+                }
+
+                this.controller1.addEventListener('triggerdown',this.onTriggerDown);
+                this.controller1.addEventListener('triggerup',this.onTriggerUp);
+
+
+                this.foundFloor();
+            } else {
+                this.rf = true;
+                setTimeout(() => this.rf = false, 3000);
+            }
+        }
+
+
+        foundFloor() {
+            this.makeRegularCube(new THREE.Vector3(0, 1, -1));
+        }
+        onMouseMove(e) {
+            this.mouse.x = (e.clientX / this.renderer.domElement.clientWidth ) * 2 - 1;
+            this.mouse.y = -(e.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+            this.raycaster.setFromCamera(this.mouse, this.camera);
+            const new_intersections = this.raycaster.intersectObjects(this.cubes.children);
+            //if the first object isn't currently the selection, then remove current selection and add the new one
+            if(new_intersections.length ===0) {
+                if(this.hovered) {
+                    this.hovered.onMouseExit();
+                    this.hovered = false;
+                }
+                return;
+            }
+            const first = new_intersections[0].object;
+            if(!this.hovered) {
+                this.hovered = first;
+                this.hovered.onMouseEnter();
+                return;
+            }
+            if(this.hovered && first.uuid !== this.hovered.uuid) {
+                this.hovered.onMouseExit();
+                this.hovered = first;
+                this.hovered.onMouseEnter();
+                return;
+            }
+        }
+
+        checkIntersection() {
+            const intersects = this.raycaster.intersectObjects(this.cubes.children);
+            //only click on the thing closest to the viewer that's visible
+            if(intersects.length === 0) return this.setSelected(null);
+
+            const cube = intersects[0].object;
+            if(cube.phantom) cube.makeReal();
+            this.setSelected(cube);
+        }
+
+        setSelected(obj) {
+            if(this.selected) this.selected.unselect();
+            this.selected = obj;
+            if(this.selected) this.selected.select();
+        }
+
+        onMouseDown(e) {
+            this.mouse.x = (e.clientX / this.renderer.domElement.clientWidth ) * 2 - 1;
+            this.mouse.y = -(e.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+            this.raycaster.setFromCamera(this.mouse, this.camera);
+            this.checkIntersection();
+        }
+
+        onTouchStart(e) {
+            if(!e.touches) return;
+            if(e.touches.length <= 0) return;
+            this.touched = true;
+            this.mouse.x = (e.touches[0].clientX / this.renderer.domElement.clientWidth ) * 2 - 1;
+            this.mouse.y = -(e.touches[0].clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+            this.raycaster.setFromCamera(this.mouse, this.camera);
+            this.checkIntersection();
+        }
+
+        onWindowResize(e) {
+            let containerWidth = container.clientWidth;
+            let containerHeight = container.clientHeight;
+            this.renderer.setSize(containerWidth, containerHeight);
+            this.camera.aspect = containerWidth / containerHeight;
+            this.camera.updateProjectionMatrix();
+        }
+
+        updateScene(frame) {
+            $("#overlay").innerHTML = `<i>touched = ${this.touched} </i>`;
+            if(this.rf === false) {
+                // $("#overlay").innerHTML = "<b>finding</b>";
+                this.rf = true;
+                frame.findFloorAnchor('first-floor-anchor').then((off) => {
+                    // $("#overlay").innerHTML = "<b>found</b>";
+                    this.foundFloor();
+                }).catch((e) => {
+                    $("#overlay").innerHTML = "<b>error</b>";
+                })
+            }
+        }
+
+        setSelectedColor(color,e) {
+            this.selectedColor = color;
+            if(this.selected) {
+                this.selected.material.color.set(this.selectedColor)
+                for(let adj in this.selected.adj) {
+                    let cube = this.selected.adj[adj]
+                    if(cube && cube.phantom === true) {
+                        cube.material.color.set(this.selectedColor)
+                    }
+                }
+            }
+            if(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
+        makeCube(pos) {
+            let mat = new THREE.MeshLambertMaterial();
+            let cube = new THREE.Mesh(this.cube_geom, mat);
+            mat.color.set(this.selectedColor);
+            cube.position.copy(pos);
+            cube.phantom = false;
+            cube.joshid = nextID();
+            cube.adj = {};
+
+            cube.select = function() {
+                Object.keys(this.adj).forEach((key)=>{
+                    let side = this.adj[key];
+                    if(side.phantom) side.visible = true;
+                });
+            };
+            cube.unselect = function() {
+                Object.keys(this.adj).forEach((key)=>{
+                    let side = this.adj[key];
+                    if(side.phantom) side.visible = false;
+                });
+            };
+            const owner = this;
+            cube.makeReal = function() {
+                this.phantom = false;
+                this.visible = true;
+                this.material.color.set(this.selectedColor);
+                this.material.transparent = false;
+                this.material.opacity = 1.0;
+                owner.makePhantoms(cube);
+            };
+            return cube;
+        }
+
+        //make the central cube
+        makeRegularCube(pos) {
+            let cube = this.makeCube(pos);
+            this.cubes.add(cube);
+            this.makePhantoms(cube);
+            return cube;
+        }
+
+        //make a phantom cube
+        makePhantomCube(pos) {
+            let cube = this.makeCube(pos);
+            cube.material.transparent = true;
+            cube.material.opacity = 0.2;
+            cube.visible = false;
+            cube.material.color.set(this.selectedColor);
+            cube.phantom = true;
+            cube.onClick = () => {
+                cube.phantom = false;
+                cube.material.color.set(this.selectedColor);
+                cube.material.transparent = false;
+                this.makePhantoms(cube);
+            };
+            this.cubes.add(cube);
+            return cube;
+        }
+
+        makePhantoms(cube) {
+            const size = 0.2; //size in meters
+            if (!cube.adj.left) {
+                let pos2 = cube.position.clone().add(new THREE.Vector3(-size, 0, 0));
+                cube.adj.left = this.makePhantomCube(pos2);
+                cube.adj.left.adj.right = cube;
+            }
+            if (!cube.adj.right) {
+                let pos2 = cube.position.clone().add(new THREE.Vector3(+size, 0, 0));
+                cube.adj.right = this.makePhantomCube(pos2);
+                cube.adj.right.adj.left = cube;
+            }
+            if (!cube.adj.top) {
+                let pos2 = cube.position.clone().add(new THREE.Vector3(0, +size*0.7, 0));
+                cube.adj.top = this.makePhantomCube(pos2);
+                cube.adj.top.adj.bottom = cube;
+            }
+            if (!cube.adj.bottom) {
+                let pos2 = cube.position.clone().add(new THREE.Vector3(0, -size*0.7, 0));
+                cube.adj.bottom = this.makePhantomCube(pos2);
+                cube.adj.bottom.adj.top = cube;
+            }
+            if (!cube.adj.front) {
+                let pos2 = cube.position.clone().add(new THREE.Vector3(0, 0, +size));
+                cube.adj.front = this.makePhantomCube(pos2);
+                cube.adj.front.adj.back = cube;
+            }
+            if (!cube.adj.back) {
+                let pos2 = cube.position.clone().add(new THREE.Vector3(0, 0, -size));
+                cube.adj.back = this.makePhantomCube(pos2);
+                cube.adj.back.adj.front = cube;
+            }
+        }
+
+        makeCubeGeometry() {
+            let geom = new THREE.Geometry();
+            const size = 0.2; //size in meters
+            const half = size/2;
+            let box = new THREE.BoxGeometry(size, size*0.7, size);
+            geom.merge(box);
+            const rad = size*0.20;
+            const qt = size/4;
+            let cyl = new THREE.CylinderGeometry(rad, rad, rad, 16);
+            cyl.translate(0,size*0.7*0.5,0);
+
+            cyl.translate(-qt,0,-qt);
+            geom.merge(cyl);
+            cyl.translate(+half,0,0);
+            geom.merge(cyl);
+            cyl.translate(0,0,+half);
+            geom.merge(cyl);
+            cyl.translate(-half,0,0);
+            geom.merge(cyl);
+            return geom;
+        }
+
+        makeFireball() {
+            let geo = new THREE.SphereGeometry(1);
+            let mat = new THREE.MeshLambertMaterial();
+            let ball = new THREE.Mesh(geo,mat);
+            ball.position.z = -4;
+            this.scene.add(ball);
+        }
+    }
+
+
+    window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            try {
+                window.pageApp = new BlockBuilderApp(document.getElementById('container'));
+            } catch(e) {
+                console.error('page error', e)
+            }
+        }, 1000)
+    })
+
+</script>
+
+</body>
+</html>
